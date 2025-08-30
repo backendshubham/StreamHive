@@ -1,0 +1,15 @@
+{
+  "name": "streamhive-multiroom-remote",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-fileupload": "^1.5.1",
+    "ws": "^8.17.0"
+  }
+}

@@ -1,0 +1,11 @@
+# dependencies & logs
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# uploads
+videos/*
+!videos/.gitkeep
+
+# temp uploads
+.tmp_uploads/

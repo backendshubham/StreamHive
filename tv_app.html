@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TV — Real-time Player</title>
+<style>
+  :root { --fg:#fff; --bg:#000; }
+  html, body { height:100%; margin:0; background: var(--bg); color: var(--fg); }
+  .wrap { position:fixed; inset:0; display:grid; place-items:center; }
+  video { width:100vw; height:100vh; object-fit:contain; background:#000; }
+  .hud { position: fixed; top:12px; left:12px; background: rgba(0,0,0,0.55); padding:8px 12px; border-radius:8px; font: 14px system-ui; }
+  .toast { position: fixed; bottom:24px; left:50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding:10px 14px; border-radius:10px; font: 16px system-ui; opacity: 0; transition: opacity .15s ease; }
+  .toast.show { opacity: 1; }
+  .note { position: fixed; top: 12px; right: 12px; font: 12px system-ui; color: #ddd; opacity: .9; max-width: 42ch; text-align: right;}
+  .gate { position: fixed; inset:0; display:grid; place-items:center; background: rgba(0,0,0,0.75); }
+  .gate button { font: 16px system-ui; padding: 14px 18px; border-radius: 12px; border: 0; cursor: pointer; background: #fff; color:#000; }
+</style>
+</head>
+<body>
+  <div class="wrap"><video id="tvVideo" preload="metadata" playsinline></video></div>
+
+  <div class="hud">
+    WS: <span id="wsState">connecting…</span> •
+    T: <span id="ct">0.0</span>s / <span id="dur">0.0</span>s •
+    Vol: <span id="vol">1.00</span> <span id="muted">(muted)</span> •
+    Rate: <span id="rate">1.0×</span> •
+    Last: <span id="last">—</span>
+  </div>
+  <div class="note" id="note"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="gate" id="gate">
+    <button id="enableBtn" aria-label="Enable playback">Click once to enable playback</button>
+  </div>
+
+<script>
+(function(){
+  const video = document.getElementById('tvVideo');
+  const wsStateEl = document.getElementById('wsState');
+  const ctEl = document.getElementById('ct');
+  const durEl = document.getElementById('dur');
+  const lastEl = document.getElementById('last');
+  const toastEl = document.getElementById('toast');
+  const noteEl = document.getElementById('note');
+  const gateEl = document.getElementById('gate');
+  const enableBtn = document.getElementById('enableBtn');
+  const volEl = document.getElementById('vol');
+  const mutedEl = document.getElementById('muted');
+  const rateEl = document.getElementById('rate');
+
+  const room = decodeURIComponent(location.pathname.split('/')[1] || '').toLowerCase();
+
+  // more reliable autoplay
+  video.muted = true;
+  video.autoplay = true;
+  video.controls = false;
+  video.volume = 1.0;
+  video.playbackRate = 1.0;
+
+  function updateHUD(){
+    ctEl.textContent = (video.currentTime || 0).toFixed(1);
+    durEl.textContent = (isFinite(video.duration) ? video.duration : 0).toFixed(1);
+    volEl.textContent = (video.volume || 0).toFixed(2);
+    mutedEl.textContent = video.muted ? '(muted)' : '(unmuted)';
+    rateEl.textContent = `${(video.playbackRate||1).toFixed(2)}×`;
+  }
+  setInterval(updateHUD, 250);
+
+  async function loadVideoByName(name){
+    try {
+      const res = await fetch(`/${encodeURIComponent(room)}/api/video?name=` + encodeURIComponent(name));
+      const data = await res.json();
+      if (data && data.src) {
+        video.src = data.src;
+        noteEl.textContent = `Source: ${data.title}`;
+        try { await video.play(); gateEl.style.display = 'none'; } catch {}
+        sendState();
+      } else {
+        showToast('Video not found on server');
+      }
+    } catch { showToast('Failed to load video metadata'); }
+  }
+
+  // initial attempt (will load sample.mp4 if present)
+  loadVideoByName('sample.mp4');
+
+  function showToast(msg, ms=900) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(() => toastEl.classList.remove('show'), ms);
+  }
+
+  enableBtn.addEventListener('click', async () => {
+    try { await video.play(); await video.pause(); gateEl.style.display = 'none'; sendState(); }
+    catch { showToast('Please click again to enable playback.'); }
+  });
+
+  const wsProtocol = (location.protocol === 'https:') ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?role=tv&room=${encodeURIComponent(room)}`);
+
+  ws.addEventListener('open', () => { wsStateEl.textContent = 'connected'; sendState(); });
+  ws.addEventListener('close', () => { wsStateEl.textContent = 'disconnected'; });
+  ws.addEventListener('error', () => { wsStateEl.textContent = 'error'; });
+
+  function sendState() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'state',
+        paused: video.paused,
+        muted: video.muted,
+        volume: video.volume,
+        rate: video.playbackRate,
+        current: (noteEl.textContent || '').replace(/^Source:\s*/, '') || (video.currentSrc || '').split('/').pop(),
+        time: video.currentTime || 0,
+        duration: isFinite(video.duration) ? video.duration : null
+      }));
+    }
+  }
+
+  ws.addEventListener('message', async (ev) => {
+    let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.type !== 'command') return;
+
+    const action = msg.action;
+    lastEl.textContent = `${action}${msg.delta!==undefined?` ${msg.delta}s`:''}${msg.value!==undefined?` ${msg.value}`:''}${msg.name?` ${msg.name}`:''}`;
+
+    try {
+      if (action === 'play')        { await video.play(); gateEl.style.display='none'; showToast('▶︎ Play'); }
+      else if (action === 'pause')  { video.pause(); showToast('⏸ Pause'); }
+      else if (action === 'playpause') { if (video.paused) { await video.play(); gateEl.style.display='none'; showToast('▶︎'); } else { video.pause(); showToast('⏸'); } }
+      else if (action === 'stop')   { video.pause(); video.currentTime = 0; showToast('⏹ Stop'); }
+
+      else if (action === 'seek')   { const d = Number(msg.delta||0); video.currentTime = Math.max(0, Math.min((video.currentTime||0)+d, video.duration||1e12)); showToast(`${d>=0?'+':''}${d}s`); }
+      else if (action === 'seekTo') { const t = Math.max(0, Number(msg.value||0)); video.currentTime = Math.min(t, video.duration||1e12); showToast(`⏩ ${t.toFixed(1)}s`); }
+      else if (action === 'seek_percent') {
+        const p = Math.max(0, Math.min(100, Number(msg.value||0)));
+        if (isFinite(video.duration)) { const t = (p/100) * video.duration; video.currentTime = t; showToast(`⏩ ${p}%`); }
+      }
+
+      else if (action === 'volume_set') { const v = Math.max(0, Math.min(1, Number(msg.value))); video.volume = v; showToast(`🔊 ${(v*100)|0}%`); }
+      else if (action === 'mute')        { video.muted = true;  showToast('🔇 Muted'); }
+      else if (action === 'unmute')      { video.muted = false; showToast('🔈 Unmuted'); }
+      else if (action === 'toggle_mute') { video.muted = !video.muted; showToast(video.muted?'🔇 Muted':'🔈 Unmuted'); }
+
+      else if (action === 'rate_set')    { const r = Math.max(0.25, Math.min(4, Number(msg.value||1))); video.playbackRate = r; showToast(`⏩ ${r}×`); }
+      else if (action === 'fullscreen')  { if (!document.fullscreenElement && video.requestFullscreen) await video.requestFullscreen(); }
+      else if (action === 'exit_fullscreen') { if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen(); }
+
+      else if (action === 'load') { if (typeof msg.name === 'string' && msg.name) { await loadVideoByName(msg.name); showToast(`Loaded: ${msg.name}`); } }
+    } catch { showToast('Action needs one tap on TV'); }
+
+    updateHUD(); sendState();
+  });
+
+  // Broadcast state on natural media events (throttled on timeupdate)
+  ['play','pause','volumechange','ratechange','loadedmetadata','seeked','timeupdate','ended'].forEach(evt => {
+    video.addEventListener(evt, () => {
+      if (evt === 'timeupdate') {
+        if (window.__stTimer) return;
+        window.__stTimer = setTimeout(() => { window.__stTimer = null; sendState(); }, 300);
+      } else { sendState(); }
+    });
+  });
+
+  // keyboard testing
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { if (video.paused) video.play(); else video.pause(); }
+    if (e.code === 'ArrowRight') { video.currentTime = Math.min((video.currentTime||0)+10, video.duration||1e9); }
+    if (e.code === 'ArrowLeft')  { video.currentTime = Math.max((video.currentTime||0)-10, 0); }
+    if (e.code === 'KeyM')       { video.muted = !video.muted; }
+    if (e.code === 'KeyF')       { if (!document.fullscreenElement) video.requestFullscreen?.(); else document.exitFullscreen?.(); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Mobile Remote</title>
+<meta name="theme-color" content="#000000" />
+<style>
+  :root { --bg:#0b0b0b; --fg:#fff; --muted:#aaa; --btn:#1c1c1c; --btnHi:#2a2a2a; --border:#2a2a2a; --card:#111; --accent:#6ee7ff; }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--fg); }
+  body { font: 16px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .wrap { min-height:100%; padding: 24px; display:flex; flex-direction:column; gap:20px; }
+  .status { display:flex; align-items:center; gap:8px; color:var(--muted); }
+  .dot { width:10px; height:10px; border-radius:50%; background:#f44336; }
+  .dot.ok { background:#2ecc71; }
+  .section { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  .btn {
+    user-select:none; -webkit-user-select:none;
+    background: var(--btn);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 16px; font-weight:600; color:var(--fg);
+    min-height: 56px;
+  }
+  .btn:active { background: var(--btnHi); transform: translateY(1px); }
+  .btn.small { min-height: 44px; font-size:14px; }
+  .btn.wide { grid-column: 1 / -1; }
+  .hint { color:var(--muted); font-size: 13px; }
+  input[type="range"] { width: 100%; }
+  label { font-size: 13px; color: var(--muted); }
+  select, input[type="file"], input[type="text"] {
+    width: 100%; padding: 12px; border-radius: 10px; border:1px solid var(--border);
+    background:#0e0e0e; color:#fff; font: 16px system-ui;
+  }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#0e0e0e; border:1px solid var(--border); font-size:12px; color:#9adfff; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="status">
+      <span class="dot" id="tvDot" aria-hidden="true"></span>
+      <span id="statusText">TV: connecting…</span>
+    </div>
+
+    <!-- Upload to this Room (with custom name) -->
+    <div class="section">
+      <div class="row" style="gap:10px;">
+        <strong>Upload to this Room</strong>
+        <span class="badge" id="extBadge" style="display:none"></span>
+      </div>
+      <div class="row" style="width:100%; gap:10px;">
+        <input type="file" id="uploadFile" accept=".mp4,.webm,.ogg,video/*" style="flex:1" />
+      </div>
+      <div class="row" style="width:100%; gap:10px; margin-top:10px;">
+        <div style="flex:1">
+          <label for="uploadName">Save as name (no extension)</label>
+          <input type="text" id="uploadName" placeholder="e.g. cafe-ad-loop" />
+        </div>
+        <button class="btn small" id="uploadBtn" style="align-self:flex-end;">⬆ Upload</button>
+      </div>
+      <div class="hint">Files are saved to <code>./videos/&lt;room&gt;/</code> as <code>&lt;name&gt;&lt;original extension&gt;</code>. Allowed: mp4/webm/ogg.</div>
+    </div>
+
+    <!-- Video Picker (dropdown) -->
+    <div class="section">
+      <div class="row" style="gap:10px;">
+        <strong>Video</strong>
+        <button class="btn small" id="refreshLibBtn" style="margin-left:auto;">↻ Refresh</button>
+      </div>
+      <select id="videoSelect"><option>Loading…</option></select>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" id="loadBtn" style="flex:1;">Load & Play</button>
+      </div>
+      <div class="hint">Shows this room’s files <em>plus</em> global files from <code>./videos/</code>.</div>
+    </div>
+
+    <!-- Playback (single row) + Stop full width -->
+    <div class="section">
+      <div class="grid3" role="group" aria-label="Playback Controls">
+        <button class="btn" id="rewBtn" aria-label="Rewind 10 seconds">⏮ 10s</button>
+        <button class="btn" id="playPauseBtn" aria-label="Play/Pause">▶︎</button>
+        <button class="btn" id="ffBtn" aria-label="Fast forward 10 seconds">⏭ 10s</button>
+        <button class="btn wide" id="stopBtn" aria-label="Stop">⏹ Stop</button>
+      </div>
+    </div>
+
+    <!-- Scrubber (percentage based) -->
+    <div class="section">
+      <label for="scrub">Position</label>
+      <input id="scrub" type="range" min="0" max="100" step="1" value="0" />
+    </div>
+
+    <!-- Player Volume -->
+    <div class="section">
+      <div class="row" style="gap:10px;">
+        <label for="volRange">Player Volume</label>
+        <span id="volLabel" style="margin-left:auto;">100%</span>
+      </div>
+      <input id="volRange" type="range" min="0" max="100" step="1" value="100" />
+      <div class="row" style="margin-top:12px;">
+        <button class="btn small" id="muteBtn">🔇 Mute</button>
+        <button class="btn small" id="unmuteBtn">🔈 Unmute</button>
+        <button class="btn small" id="toggleMuteBtn">🔁 Toggle</button>
+      </div>
+    </div>
+
+    <!-- Speed + Fullscreen -->
+    <div class="section">
+      <div class="row">
+        <span>Speed</span>
+        <button class="btn small" data-rate="0.5">0.5×</button>
+        <button class="btn small" data-rate="1">1×</button>
+        <button class="btn small" data-rate="1.5">1.5×</button>
+        <button class="btn small" data-rate="2">2×</button>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" id="fsBtn">⛶ Fullscreen</button>
+        <button class="btn" id="exitFsBtn">↙ Exit Fullscreen</button>
+      </div>
+    </div>
+
+    <div class="hint">If Play doesn’t work at first, tap “Enable playback” once on the TV screen.</div>
+  </div>
+
+<script>
+(function(){
+  const statusText = document.getElementById('statusText');
+  const tvDot = document.getElementById('tvDot');
+
+  const refreshLibBtn = document.getElementById('refreshLibBtn');
+  const videoSelect = document.getElementById('videoSelect');
+  const loadBtn = document.getElementById('loadBtn');
+
+  const rewBtn = document.getElementById('rewBtn');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const ffBtn = document.getElementById('ffBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  const volRange = document.getElementById('volRange');
+  const volLabel = document.getElementById('volLabel'); // (keep single declaration)
+  const muteBtn = document.getElementById('muteBtn');
+  const unmuteBtn = document.getElementById('unmuteBtn');
+  const toggleMuteBtn = document.getElementById('toggleMuteBtn');
+
+  const fsBtn = document.getElementById('fsBtn');
+  const exitFsBtn = document.getElementById('exitFsBtn');
+
+  const scrub = document.getElementById('scrub');
+
+  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadFile = document.getElementById('uploadFile');
+  const uploadName = document.getElementById('uploadName');
+  const extBadge = document.getElementById('extBadge');
+
+  // Only disable actual playback controls when TV is offline (NOT upload controls)
+  const controls = [
+    rewBtn, playPauseBtn, ffBtn, stopBtn,
+    volRange, muteBtn, unmuteBtn, toggleMuteBtn,
+    fsBtn, exitFsBtn, scrub,
+    refreshLibBtn, loadBtn, videoSelect
+  ];
+
+  function setControlsEnabled(on){ controls.forEach(el => el.disabled = !on); }
+  function vibrate(ms=15){ if (navigator.vibrate) navigator.vibrate(ms); }
+
+  const room = decodeURIComponent(location.pathname.split('/')[1] || '').toLowerCase();
+
+  const wsProtocol = (location.protocol === 'https:') ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?role=remote&room=${encodeURIComponent(room)}`);
+
+  function setTVStatus(connected) {
+    tvDot.classList.toggle('ok', connected);
+    statusText.textContent = connected ? 'TV: connected' : 'TV: not connected';
+    setControlsEnabled(connected);
+  }
+
+  ws.addEventListener('open', () => { statusText.textContent = 'Connected to server'; });
+  ws.addEventListener('close', () => { statusText.textContent = 'Disconnected'; setTVStatus(false); });
+  ws.addEventListener('error', () => { statusText.textContent = 'Connection error'; });
+
+  let tvPaused = true;
+  function updatePlayPauseIcon() { playPauseBtn.textContent = tvPaused ? '▶︎' : '⏸'; }
+  updatePlayPauseIcon();
+
+  // --- optimistic progress tracking (smooth Position slider) ---
+  let last = { time: 0, duration: 0, rate: 1, paused: true, stamp: performance.now() };
+  let scrubUserActive = false;
+
+  ws.addEventListener('message', (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'status' && typeof msg.tvConnected === 'boolean') setTVStatus(msg.tvConnected);
+
+      if (msg.type === 'tv_state') {
+        if (typeof msg.paused === 'boolean') { tvPaused = msg.paused; updatePlayPauseIcon(); }
+        if (typeof msg.volume === 'number')  { volRange.value = Math.round(msg.volume * 100); volLabel.textContent = `${volRange.value}%`; }
+
+        if (typeof msg.time === 'number' && typeof msg.duration === 'number' && msg.duration > 0) {
+          last.time = msg.time;
+          last.duration = msg.duration;
+          last.rate = (typeof msg.rate === 'number' && isFinite(msg.rate)) ? msg.rate : 1;
+          last.paused = !!msg.paused;
+          last.stamp = performance.now();
+
+          const p = Math.round((msg.time / msg.duration) * 100);
+          if (!Number.isNaN(p) && !scrubUserActive) scrub.value = Math.max(0, Math.min(100, p));
+        }
+      }
+    } catch {}
+  });
+
+  function send(cmd) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(cmd));
+      vibrate(10);
+    }
+  }
+
+  // Show ext + prefill name
+  uploadFile.addEventListener('change', () => {
+    const file = uploadFile.files[0];
+    if (!file) { extBadge.style.display='none'; return; }
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext) { extBadge.textContent = '.' + ext; extBadge.style.display = 'inline-block'; }
+    else { extBadge.style.display='none'; }
+    if (!uploadName.value.trim()) {
+      uploadName.value = file.name.replace(/\.[a-z0-9]{1,10}$/i,'');
+    }
+  });
+
+  // Upload with custom name
+  uploadBtn.addEventListener('click', async () => {
+    const file = uploadFile.files && uploadFile.files[0];
+    if (!file) { alert('Pick a file first'); return; }
+    const name = uploadName.value.trim();
+    if (!name) { alert('Enter a friendly name (without extension)'); uploadName.focus(); return; }
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('name', name);
+    try {
+      const res = await fetch(`/${encodeURIComponent(room)}/api/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        alert('Uploaded: ' + data.file);
+        uploadFile.value = '';
+        populateDropdown();
+      } else {
+        alert('Upload failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Upload error: ' + e.message);
+    }
+  });
+
+  // Playback row + Stop full width
+  playPauseBtn.addEventListener('click', () => send({ type:'command', action:'playpause' }));
+  stopBtn.addEventListener('click',      () => send({ type:'command', action:'stop' }));
+  ffBtn.addEventListener('click',        () => send({ type:'command', action:'seek', delta: 10 }));
+  rewBtn.addEventListener('click',       () => send({ type:'command', action:'seek', delta: -10 }));
+
+  // Scrubber (0..100%)
+  let scrubTimer = 0;
+  function scrubSend(){ const p = Number(scrub.value); send({ type:'command', action:'seek_percent', value: p }); }
+  scrub.addEventListener('input', () => { clearTimeout(scrubTimer); scrubTimer = setTimeout(scrubSend, 80); });
+  scrub.addEventListener('change', scrubSend);
+
+  // Pause optimistic updates while the user is scrubbing
+  ['pointerdown','touchstart','mousedown'].forEach(evt => {
+    scrub.addEventListener(evt, () => { scrubUserActive = true; }, { passive: true });
+  });
+  ['pointerup','touchend','mouseup','mouseleave','blur','change'].forEach(evt => {
+    scrub.addEventListener(evt, () => { scrubUserActive = false; }, { passive: true });
+  });
+
+  // Smooth slider animation between tv_state updates
+  function tick() {
+    if (!scrubUserActive && last.duration > 0) {
+      const now = performance.now();
+      const dt = (now - last.stamp) / 1000;
+      let estTime = last.time;
+      if (!last.paused) estTime = Math.max(0, Math.min(last.time + dt * (last.rate || 1), last.duration));
+      const p = Math.round((estTime / last.duration) * 100);
+      if (!Number.isNaN(p)) scrub.value = Math.max(0, Math.min(100, p));
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // Player volume
+  const updateVolLabel = () => volLabel.textContent = `${volRange.value}%`;
+  updateVolLabel();
+  let volTimer = 0;
+  function volSend(){ const v = Math.max(0, Math.min(1, Number(volRange.value)/100)); send({ type:'command', action:'volume_set', value: v }); }
+  volRange.addEventListener('input', () => { updateVolLabel(); clearTimeout(volTimer); volTimer = setTimeout(volSend, 80); });
+  volRange.addEventListener('change', volSend);
+
+  muteBtn.addEventListener('click',       () => send({ type:'command', action:'mute' }));
+  unmuteBtn.addEventListener('click',     () => send({ type:'command', action:'unmute' }));
+  toggleMuteBtn.addEventListener('click', () => send({ type:'command', action:'toggle_mute' }));
+
+  // Speed + Fullscreen
+  document.querySelectorAll('[data-rate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = Number(btn.getAttribute('data-rate'));
+      send({ type:'command', action:'rate_set', value: r });
+    });
+  });
+  fsBtn.addEventListener('click',     () => send({ type:'command', action:'fullscreen' }));
+  exitFsBtn.addEventListener('click', () => send({ type:'command', action:'exit_fullscreen' }));
+
+  // Library
+  async function populateDropdown() {
+    try {
+      videoSelect.innerHTML = '<option>Loading…</option>';
+      const res = await fetch(`/${encodeURIComponent(room)}/api/videos`);
+      const data = await res.json();
+      const vids = Array.isArray(data.videos) ? data.videos : [];
+      if (!vids.length) { videoSelect.innerHTML = '<option disabled>No videos (add files to ./videos)</option>'; return; }
+      videoSelect.innerHTML = '';
+      vids.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = v.name; opt.textContent = v.name;
+        if (i === 0) opt.selected = true;
+        videoSelect.appendChild(opt);
+      });
+    } catch { videoSelect.innerHTML = '<option disabled>Failed to load list</option>'; }
+  }
+  refreshLibBtn.addEventListener('click', populateDropdown);
+  loadBtn.addEventListener('click', () => {
+    const name = videoSelect.value;
+    if (name) { send({ type:'command', action:'load', name }); setTimeout(() => send({ type:'command', action:'play' }), 150); }
+  });
+  populateDropdown(); setInterval(populateDropdown, 15000);
+
+  setControlsEnabled(false);
+})();
+</script>
+</body>
+</html>

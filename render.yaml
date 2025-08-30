@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: streamhive
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: videos
+      mountPath: /opt/render/project/src/videos
+      sizeGB: 5
+    healthCheckPath: /healthz
