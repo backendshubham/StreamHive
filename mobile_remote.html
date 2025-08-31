@@ -8,56 +8,31 @@
 <style>
   :root { --bg:#0b0b0b; --fg:#fff; --muted:#aaa; --btn:#1c1c1c; --btnHi:#2a2a2a; --border:#2a2a2a; --card:#111; --accent:#6ee7ff; }
   html, body { height:100%; margin:0; background:var(--bg); color:var(--fg); }
-  body { font: 16px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-  .wrap { min-height:100%; padding: 24px; display:flex; flex-direction:column; gap:20px; }
+  body { font:16px/1.3 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; -webkit-tap-highlight-color:transparent; }
+  .wrap { min-height:100%; padding:24px; display:flex; flex-direction:column; gap:20px; }
   .status { display:flex; align-items:center; gap:8px; color:var(--muted); }
   .dot { width:10px; height:10px; border-radius:50%; background:#f44336; }
   .dot.ok { background:#2ecc71; }
   .section { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
   .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-  .btn {
-    user-select:none; -webkit-user-select:none;
-    background: var(--btn);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 12px;
-    display:flex; align-items:center; justify-content:center;
-    font-size: 16px; font-weight:600; color:var(--fg);
-    min-height: 56px;
-  }
-  .btn:active { background: var(--btnHi); transform: translateY(1px); }
-  .btn.small { min-height: 44px; font-size:14px; }
-  .btn.wide { grid-column: 1 / -1; }
-  .hint { color:var(--muted); font-size: 13px; }
-  input[type="range"] { width: 100%; }
-  label { font-size: 13px; color: var(--muted); }
-  select, input[type="file"], input[type="text"] {
-    width: 100%; padding: 12px; border-radius: 10px; border:1px solid var(--border);
-    background:#0e0e0e; color:#fff; font: 16px system-ui;
-  }
+  .btn { user-select:none; -webkit-user-select:none; background:var(--btn); border:1px solid var(--border); border-radius:12px; padding:14px 12px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; color:var(--fg); min-height:56px; }
+  .btn:active { background:var(--btnHi); transform:translateY(1px); }
+  .btn.small { min-height:44px; font-size:14px; }
+  .btn.wide { grid-column:1/-1; }
+  .hint { color:var(--muted); font-size:13px; }
+  input[type="range"] { width:100%; }
+  label { font-size:13px; color:var(--muted); }
+  select, input[type="file"], input[type="text"] { width:100%; padding:12px; border-radius:10px; border:1px solid var(--border); background:#0e0e0e; color:#fff; font:16px system-ui; }
   .badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#0e0e0e; border:1px solid var(--border); font-size:12px; color:#9adfff; }
 
   /* Upload loader UI */
   .upload-status { display:none; align-items:center; gap:10px; margin-top:10px; color:#cfefff; font-size:14px; }
-  .spinner {
-    width:16px; height:16px; border-radius:50%;
-    border:2px solid rgba(255,255,255,.25);
-    border-top-color:#6ee7ff;
-    animation: spin .8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  progress {
-    width: 100%;
-    height: 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: #0e0e0e;
-    overflow: hidden;
-  }
+  .spinner { width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.25); border-top-color:#6ee7ff; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  progress { width:100%; height:8px; border:1px solid var(--border); border-radius:999px; background:#0e0e0e; overflow:hidden; }
   progress::-webkit-progress-bar { background:#0e0e0e; }
-  progress::-webkit-progress-value { background:#6ee7ff; }
-  progress::-moz-progress-bar { background:#6ee7ff; }
+  progress::-webkit-progress-value, progress::-moz-progress-bar { background:#6ee7ff; }
 </style>
 </head>
 <body>
@@ -84,7 +59,7 @@
         <button class="btn small" id="uploadBtn" style="align-self:flex-end;">⬆ Upload</button>
       </div>
 
-      <!-- Loader + progress (added) -->
+      <!-- Loader + progress -->
       <div class="upload-status" id="uploadStatus">
         <div class="spinner" aria-hidden="true"></div>
         <div id="uploadMsg">Uploading…</div>
@@ -95,7 +70,7 @@
       <div class="hint">Files are saved to <code>./videos/&lt;room&gt;/</code> as <code>&lt;name&gt;&lt;original extension&gt;</code>. Allowed: mp4/webm/ogg.</div>
     </div>
 
-    <!-- Video Picker (dropdown) -->
+    <!-- Video Picker -->
     <div class="section">
       <div class="row" style="gap:10px;">
         <strong>Video</strong>
@@ -108,7 +83,7 @@
       <div class="hint">Shows this room’s files <em>plus</em> global files from <code>./videos/</code>.</div>
     </div>
 
-    <!-- Playback (single row) + Stop full width -->
+    <!-- Playback -->
     <div class="section">
       <div class="grid3" role="group" aria-label="Playback Controls">
         <button class="btn" id="rewBtn" aria-label="Rewind 10 seconds">⏮ 10s</button>
@@ -118,13 +93,13 @@
       </div>
     </div>
 
-    <!-- Scrubber (percentage based) -->
+    <!-- Scrubber -->
     <div class="section">
       <label for="scrub">Position</label>
       <input id="scrub" type="range" min="0" max="100" step="1" value="0" />
     </div>
 
-    <!-- Player Volume -->
+    <!-- Volume -->
     <div class="section">
       <div class="row" style="gap:10px;">
         <label for="volRange">Player Volume</label>
@@ -186,13 +161,11 @@
   const uploadName = document.getElementById('uploadName');
   const extBadge = document.getElementById('extBadge');
 
-  // loader elements
   const uploadStatus = document.getElementById('uploadStatus');
   const uploadMsg    = document.getElementById('uploadMsg');
   const uploadPct    = document.getElementById('uploadPct');
   const uploadProg   = document.getElementById('uploadProg');
 
-  // Only disable actual playback controls when TV is offline (NOT upload controls)
   const controls = [
     rewBtn, playPauseBtn, ffBtn, stopBtn,
     volRange, muteBtn, unmuteBtn, toggleMuteBtn,
@@ -204,7 +177,6 @@
   function vibrate(ms=15){ if (navigator.vibrate) navigator.vibrate(ms); }
 
   const room = decodeURIComponent(location.pathname.split('/')[1] || '').toLowerCase();
-
   const wsProtocol = (location.protocol === 'https:') ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?role=remote&room=${encodeURIComponent(room)}`);
 
@@ -214,27 +186,43 @@
     setControlsEnabled(connected);
   }
 
-  ws.addEventListener('open', () => { statusText.textContent = 'Connected to server'; });
+  // QR context + one-shot guard for auto-kick
+  const params = new URLSearchParams(location.search);
+  const cameFromQR = params.get('from') === 'qr';
+  let autoKicked = false;
+
+  ws.addEventListener('open', () => {
+    statusText.textContent = 'Connected to server';
+    if (cameFromQR) {
+      // notify (optional, for index listeners)
+      try { ws.send(JSON.stringify({ type:'signal', event:'qr_opened' })); } catch {}
+    }
+  });
   ws.addEventListener('close', () => { statusText.textContent = 'Disconnected'; setTVStatus(false); });
   ws.addEventListener('error', () => { statusText.textContent = 'Connection error'; });
 
-  let tvPaused = true;
-  function updatePlayPauseIcon() { playPauseBtn.textContent = tvPaused ? '▶︎' : '⏸'; }
-  updatePlayPauseIcon();
-
-  // --- optimistic progress tracking (smooth Position slider) ---
-  let last = { time: 0, duration: 0, rate: 1, paused: true, stamp: performance.now() };
+  // optimistic progress state
+  let last = { time:0, duration:0, rate:1, paused:true, stamp:performance.now() };
   let scrubUserActive = false;
 
   ws.addEventListener('message', (ev) => {
     try {
       const msg = JSON.parse(ev.data);
-      if (msg.type === 'status' && typeof msg.tvConnected === 'boolean') setTVStatus(msg.tvConnected);
+
+      if (msg.type === 'status' && typeof msg.tvConnected === 'boolean') {
+        setTVStatus(msg.tvConnected);
+        // Auto-start once when opened via QR and TV is online
+        if (cameFromQR && msg.tvConnected && !autoKicked) autoKickTV(room);
+      }
 
       if (msg.type === 'tv_state') {
-        if (typeof msg.paused === 'boolean') { tvPaused = msg.paused; updatePlayPauseIcon(); }
-        if (typeof msg.volume === 'number')  { volRange.value = Math.round(msg.volume * 100); volLabel.textContent = `${volRange.value}%`; }
-
+        if (typeof msg.paused === 'boolean') {
+          playPauseBtn.textContent = msg.paused ? '▶︎' : '⏸';
+        }
+        if (typeof msg.volume === 'number')  {
+          volRange.value = Math.round(msg.volume * 100);
+          volLabel.textContent = `${volRange.value}%`;
+        }
         if (typeof msg.time === 'number' && typeof msg.duration === 'number' && msg.duration > 0) {
           last.time = msg.time;
           last.duration = msg.duration;
@@ -256,32 +244,40 @@
     }
   }
 
-  // Show ext + prefill name
+  // Auto-kick helper: load first video (if any) and play
+  async function autoKickTV(roomName){
+    if (autoKicked) return;
+    autoKicked = true;
+    try {
+      const res = await fetch(`/${encodeURIComponent(roomName)}/api/video`);
+      const data = await res.json(); // {name?:string}
+      if (data && data.name) {
+        send({ type:'command', action:'load', name:data.name });
+        setTimeout(() => send({ type:'command', action:'play' }), 200);
+      } else {
+        send({ type:'command', action:'play' });
+      }
+    } catch {
+      send({ type:'command', action:'play' });
+    }
+  }
+
+  // Upload UI
   uploadFile.addEventListener('change', () => {
     const file = uploadFile.files[0];
     if (!file) { extBadge.style.display='none'; return; }
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (ext) { extBadge.textContent = '.' + ext; extBadge.style.display = 'inline-block'; }
     else { extBadge.style.display='none'; }
-    if (!uploadName.value.trim()) {
-      uploadName.value = file.name.replace(/\.[a-z0-9]{1,10}$/i,'');
-    }
+    if (!uploadName.value.trim()) uploadName.value = file.name.replace(/\.[a-z0-9]{1,10}$/i,'');
   });
 
-  // Upload helpers (loader)
   function setUploading(on) {
-    uploadBtn.disabled = on;
-    uploadFile.disabled = on;
-    uploadName.disabled = on;
+    uploadBtn.disabled = on; uploadFile.disabled = on; uploadName.disabled = on;
     uploadStatus.style.display = on ? 'flex' : 'none';
-    if (!on) {
-      uploadProg.value = 0;
-      uploadPct.textContent = '0%';
-      uploadMsg.textContent = 'Uploading…';
-    }
+    if (!on) { uploadProg.value = 0; uploadPct.textContent = '0%'; uploadMsg.textContent = 'Uploading…'; }
   }
 
-  // Upload with custom name + progress (XMLHttpRequest)
   uploadBtn.addEventListener('click', () => {
     const file = uploadFile.files && uploadFile.files[0];
     if (!file) { alert('Pick a file first'); return; }
@@ -298,16 +294,12 @@
     xhr.upload.onprogress = (e) => {
       if (!e.lengthComputable) return;
       const pct = Math.round((e.loaded / e.total) * 100);
-      uploadProg.value = pct;
-      uploadPct.textContent = pct + '%';
+      uploadProg.value = pct; uploadPct.textContent = pct + '%';
       uploadMsg.textContent = pct < 100 ? 'Uploading…' : 'Processing…';
     };
 
     xhr.onloadstart = () => setUploading(true);
-    xhr.onerror = () => {
-      setUploading(false);
-      alert('Upload error (network)');
-    };
+    xhr.onerror = () => { setUploading(false); alert('Upload error (network)'); };
     xhr.onload = () => {
       setUploading(false);
       try {
@@ -315,21 +307,17 @@
         if (xhr.status >= 200 && xhr.status < 300 && data.success) {
           alert('Uploaded: ' + data.file);
           uploadFile.value = '';
-          // keep typed name for next upload (nice for batches), or clear it:
-          // uploadName.value = '';
           populateDropdown();
         } else {
           alert('Upload failed: ' + (data.error || ('HTTP ' + xhr.status)));
         }
-      } catch (err) {
-        alert('Unexpected server response');
-      }
+      } catch { alert('Unexpected server response'); }
     };
 
     xhr.send(fd);
   });
 
-  // Playback row + Stop full width
+  // Playback + transport
   playPauseBtn.addEventListener('click', () => send({ type:'command', action:'playpause' }));
   stopBtn.addEventListener('click',      () => send({ type:'command', action:'stop' }));
   ffBtn.addEventListener('click',        () => send({ type:'command', action:'seek', delta: 10 }));
@@ -337,19 +325,18 @@
 
   // Scrubber (0..100%)
   let scrubTimer = 0;
-  function scrubSend(){ const p = Number(scrub.value); send({ type:'command', action:'seek_percent', value: p }); }
+  function scrubSend(){ const p = Number(scrub.value); send({ type:'command', action:'seek_percent', value:p }); }
   scrub.addEventListener('input', () => { clearTimeout(scrubTimer); scrubTimer = setTimeout(scrubSend, 80); });
   scrub.addEventListener('change', scrubSend);
 
-  // Pause optimistic updates while the user is scrubbing
   ['pointerdown','touchstart','mousedown'].forEach(evt => {
-    scrub.addEventListener(evt, () => { scrubUserActive = true; }, { passive: true });
+    scrub.addEventListener(evt, () => { scrubUserActive = true; }, { passive:true });
   });
   ['pointerup','touchend','mouseup','mouseleave','blur','change'].forEach(evt => {
-    scrub.addEventListener(evt, () => { scrubUserActive = false; }, { passive: true });
+    scrub.addEventListener(evt, () => { scrubUserActive = false; }, { passive:true });
   });
 
-  // Smooth slider animation between tv_state updates
+  // Smooth slider animation
   function tick() {
     if (!scrubUserActive && last.duration > 0) {
       const now = performance.now();
@@ -363,11 +350,11 @@
   }
   requestAnimationFrame(tick);
 
-  // Player volume
+  // Volume
   const updateVolLabel = () => volLabel.textContent = `${volRange.value}%`;
   updateVolLabel();
   let volTimer = 0;
-  function volSend(){ const v = Math.max(0, Math.min(1, Number(volRange.value)/100)); send({ type:'command', action:'volume_set', value: v }); }
+  function volSend(){ const v = Math.max(0, Math.min(1, Number(volRange.value)/100)); send({ type:'command', action:'volume_set', value:v }); }
   volRange.addEventListener('input', () => { updateVolLabel(); clearTimeout(volTimer); volTimer = setTimeout(volSend, 80); });
   volRange.addEventListener('change', volSend);
 
@@ -375,11 +362,11 @@
   unmuteBtn.addEventListener('click',     () => send({ type:'command', action:'unmute' }));
   toggleMuteBtn.addEventListener('click', () => send({ type:'command', action:'toggle_mute' }));
 
-  // Speed + Fullscreen
+  // Rate + Fullscreen
   document.querySelectorAll('[data-rate]').forEach(btn => {
     btn.addEventListener('click', () => {
       const r = Number(btn.getAttribute('data-rate'));
-      send({ type:'command', action:'rate_set', value: r });
+      send({ type:'command', action:'rate_set', value:r });
     });
   });
   fsBtn.addEventListener('click',     () => send({ type:'command', action:'fullscreen' }));
@@ -407,7 +394,8 @@
     const name = videoSelect.value;
     if (name) { send({ type:'command', action:'load', name }); setTimeout(() => send({ type:'command', action:'play' }), 150); }
   });
-  populateDropdown(); setInterval(populateDropdown, 15000);
+  populateDropdown();
+  setInterval(populateDropdown, 15000);
 
   setControlsEnabled(false);
 })();

@@ -1,49 +1,111 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>TV Remote — Multi-Room</title>
 <style>
-  :root{--bg:#0e0e12;--card:#14141c;--card2:#191923;--fg:#fff;--muted:#b2b2c2;--border:#242438;--accent:#6ee7ff;--accent2:#7c5cff}
-  html,body{height:100%} body{margin:0;background:
-    radial-gradient(1200px 600px at 100% -20%, rgba(124,92,255,.18), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(110,231,255,.18), transparent 60%),
-    linear-gradient(180deg, #0b0b10, #0e0e12 30%); color:var(--fg);
-    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  :root{
+    --bg:#0e0e12; --card:#14141c; --card2:#191923; --fg:#fff; --muted:#b2b2c2; --border:#242438;
+    --btnbg:rgba(255,255,255,.06); --btnbgH:rgba(255,255,255,.12);
+  }
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 100% -20%, rgba(124,92,255,.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(110,231,255,.18), transparent 60%),
+      linear-gradient(180deg, #0b0b10, #0e0e12 30%);
+    color:var(--fg);
+    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  }
   .wrap{min-height:100%;display:grid;place-items:center;padding:32px}
-  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--border);border-radius:16px;padding:22px;max-width:720px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--card2));
+    border:1px solid var(--border); border-radius:16px; padding:22px;
+    max-width:980px; width:100%; box-shadow:0 10px 30px rgba(0,0,0,.25)
+  }
   h1{margin:0 0 12px 0;font-size:24px}
   .muted{color:var(--muted)}
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  .input{flex:1;background:#0f0f18;border:1px solid var(--border);color:#d7eafe;padding:12px;border-radius:10px;font-family:ui-monospace,monospace}
-  .btn{padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:#fff;font-weight:700;text-decoration:none}
-  .grid{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  @media (max-width:720px){.grid{grid-template-columns:1fr}}
-  .copyrow{display:flex;gap:10px;align-items:stretch;margin-top:10px}
-</style></head>
+  .input{
+    flex:1; min-width:240px; background:#0f0f18; border:1px solid var(--border);
+    color:#d7eafe; padding:12px; border-radius:10px; font-family:ui-monospace,monospace
+  }
+  .btn{
+    padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--btnbg); color:#fff; font-weight:700; text-decoration:none; cursor:pointer;
+    transition:background .12s ease, transform .05s ease
+  }
+  .btn:hover{background:var(--btnbgH)}
+  .btn:active{transform:translateY(1px)}
+  .grid{display:grid; gap:12px; grid-template-columns:1fr 1fr}
+  .copyrow{display:flex; gap:10px; align-items:stretch}
+  .qrwrap{
+    display:flex; gap:18px; align-items:flex-start; margin-top:16px; flex-wrap:wrap
+  }
+  .leftcol{
+    flex:1; min-width:300px; display:flex; flex-direction:column; gap:10px;
+  }
+  .qrbox{
+    width:260px; background:#0f0f18; border:1px dashed var(--border); border-radius:12px;
+    padding:14px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start
+  }
+  .qrbox .title{font-weight:700; margin-bottom:10px; text-align:center}
+  .qrbox img{width:220px; height:220px; image-rendering:pixelated; border-radius:6px}
+  .hint{font-size:13px; color:var(--muted)}
+  .small{font-size:13px}
+  .leftcol p{margin:0}
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+    .qrbox{width:100%}
+  }
+</style>
+</head>
 <body>
-<div class="wrap"><div class="card">
-  <h1>Real-time TV Remote — Multi-Room</h1>
-  <p class="muted small">Create a <strong>Room ID</strong> and share its TV/Remote links with people in that place.</p>
-  <div class="row">
-    <input id="room" class="input" placeholder="e.g. cafe-42 or my-home" />
-    <button id="go" class="btn">Create / Join</button>
+<div class="wrap">
+  <div class="card" role="region" aria-label="Room setup">
+    <h1>Real-time TV Remote — Multi-Room</h1>
+    <p class="muted small">Create a <strong>Room ID</strong> and share its TV/Remote links with people in that place.</p>
+
+    <div class="row">
+      <input id="room" class="input" placeholder="e.g. cafe-42 or my-home" autocomplete="off" inputmode="latin" aria-label="Room ID" autofocus />
+      <button id="go" class="btn" aria-label="Create or join room">Create / Join</button>
+    </div>
+
+    <div id="links" style="display:none;">
+      <div class="qrwrap">
+        <!-- Left: actions + links -->
+        <div class="leftcol">
+          <div class="grid">
+            <a class="btn" id="tvBtn" href="#" rel="noopener">📺 Open TV</a>
+            <a class="btn" id="remoteBtn" href="#" rel="noopener">📱 Open Remote</a>
+          </div>
+
+          <div class="copyrow">
+            <input class="input" id="tvUrl" readonly aria-label="TV URL"/>
+            <button class="btn" data-copy="tvUrl" aria-label="Copy TV link">Copy TV Link</button>
+          </div>
+          <div class="copyrow">
+            <input class="input" id="remoteUrl" readonly aria-label="Remote URL"/>
+            <button class="btn" data-copy="remoteUrl" aria-label="Copy Remote link">Copy Remote Link</button>
+          </div>
+
+          <p class="hint">Room videos: <code>./videos/&lt;room&gt;/</code> • Global: <code>./videos/</code></p>
+        </div>
+
+        <!-- Right: room QR -->
+        <div class="qrbox" aria-live="polite">
+          <div class="title">Scan to open Remote</div>
+          <img id="qrImg" alt="QR code for Remote link" src="" decoding="async" />
+          <div class="hint" id="qrHint">—</div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div id="links" style="display:none;margin-top:16px">
-    <div class="grid">
-      <a class="btn" id="tvBtn" href="#">📺 Open TV</a>
-      <a class="btn" id="remoteBtn" href="#">📱 Open Remote</a>
-    </div>
-    <div class="copyrow">
-      <input class="input" id="tvUrl" readonly/>
-      <button class="btn" data-copy="tvUrl">Copy TV Link</button>
-    </div>
-    <div class="copyrow">
-      <input class="input" id="remoteUrl" readonly/>
-      <button class="btn" data-copy="remoteUrl">Copy Remote Link</button>
-    </div>
-  </div>
-</div></div>
+</div>
+
 <script>
-(function(){
+(() => {
   const roomInput = document.getElementById('room');
   const goBtn = document.getElementById('go');
   const links = document.getElementById('links');
@@ -51,32 +113,106 @@
   const remoteUrl = document.getElementById('remoteUrl');
   const tvBtn = document.getElementById('tvBtn');
   const remoteBtn = document.getElementById('remoteBtn');
+  const qrImg = document.getElementById('qrImg');
+  const qrHint = document.getElementById('qrHint');
 
-  function slugify(s){
-    return String(s||'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,64);
+  // keep the computed URLs for redirect after scan
+  let currentRoom = null;
+  let currentTV = '';
+  let currentRemote = '';
+
+  const slugify = (s) =>
+    String(s || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 64);
+
+  function setQR(url){
+    const primary  = 'https://chart.googleapis.com/chart?cht=qr&chs=220x220&chld=M|0&chl=' + encodeURIComponent(url);
+    const fallback = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+    qrImg.onerror = () => { if (qrImg.src !== fallback) qrImg.src = fallback; };
+    qrImg.src = primary;
+    qrHint.textContent = url.replace(/^https?:\/\//,'');
   }
+
   function showLinks(room){
+    currentRoom = room;
     const base = window.location.origin;
-    const tv = base + '/' + room + '/tv';
-    const remote = base + '/' + room + '/remote';
-    tvUrl.value = tv; remoteUrl.value = remote;
-    tvBtn.href = tv; remoteBtn.href = remote;
+    currentTV = `${base}/${room}/tv`;
+    currentRemote = `${base}/${room}/remote?from=qr`;
+
+    tvUrl.value = currentTV; tvBtn.href = currentTV;
+    remoteUrl.value = currentRemote; remoteBtn.href = currentRemote;
+    setQR(currentRemote);
     links.style.display = '';
+
+    // DO NOT open the TV window here — we wait for QR scan
+    ensureIndexWS(room);
   }
-  goBtn.addEventListener('click', ()=>{
+
+  roomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') goBtn.click(); });
+  goBtn.addEventListener('click', () => {
     const room = slugify(roomInput.value);
-    if(!room){ roomInput.focus(); return; }
+    if (!room) { roomInput.focus(); return; }
     showLinks(room);
   });
-  document.querySelectorAll('[data-copy]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+
+  // Copy helpers
+  function flash(btn, ok=true) {
+    const prev = btn.textContent;
+    btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+    setTimeout(() => (btn.textContent = prev), 900);
+  }
+  async function copyText(text, btn, inputEl) {
+    let success = false;
+    try { await navigator.clipboard.writeText(text); success = true; }
+    catch {
+      try { inputEl?.select?.(); document.execCommand('copy'); success = true; }
+      catch {}
+      finally { window.getSelection()?.removeAllRanges?.(); inputEl?.blur?.(); }
+    }
+    flash(btn, success);
+  }
+  document.querySelectorAll('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const id = btn.getAttribute('data-copy');
       const el = document.getElementById(id);
-      try { await navigator.clipboard.writeText(el.value); btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent='Copy ' + (id==='tvUrl'?'TV':'Remote') + ' Link', 900); }
-      catch { el.select(); document.execCommand('copy'); }
+      copyText(el.value, btn, el);
     });
   });
+
+  // expose for other script
+  window.__getCurrentTV = () => currentTV;
 })();
+</script>
+
+<script>
+let idxWS = null, idxRoom = null;
+
+function ensureIndexWS(room){
+  if (idxRoom === room && idxWS && idxWS.readyState <= 1) return;
+  idxRoom = room;
+  if (idxWS) { try { idxWS.close(); } catch {} }
+
+  const proto = (location.protocol === 'https:') ? 'wss' : 'ws';
+  idxWS = new WebSocket(`${proto}://${location.host}/ws?role=remote&room=${encodeURIComponent(room)}`);
+
+  idxWS.addEventListener('message', async (ev) => {
+    let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+
+    // When the phone remote opens via QR, it sends this signal on connect
+    if (msg.type === 'signal' && msg.event === 'qr_opened') {
+      const tvUrl = (window.__getCurrentTV && window.__getCurrentTV()) || '';
+      if (tvUrl) {
+        // Redirect this tab to TV now that QR was scanned
+        location.href = tvUrl;
+      }
+    }
+  });
+}
 </script>
 </body>
 </html>

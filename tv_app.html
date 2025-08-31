@@ -51,7 +51,7 @@
 
   const room = decodeURIComponent(location.pathname.split('/')[1] || '').toLowerCase();
 
-  // more reliable autoplay
+  // reliable autoplay defaults
   video.muted = true;
   video.autoplay = true;
   video.controls = false;
@@ -67,13 +67,19 @@
   }
   setInterval(updateHUD, 250);
 
+  function filenameFromSrc(src){
+    try { return new URL(src, location.href).pathname.split('/').pop(); }
+    catch { return (src || '').split('/').pop() || ''; }
+  }
+
   async function loadVideoByName(name){
     try {
       const res = await fetch(`/${encodeURIComponent(room)}/api/video?name=` + encodeURIComponent(name));
       const data = await res.json();
       if (data && data.src) {
         video.src = data.src;
-        noteEl.textContent = `Source: ${data.title}`;
+        const label = data.name || data.title || filenameFromSrc(data.src);
+        noteEl.textContent = `Source: ${label}`;
         try { await video.play(); gateEl.style.display = 'none'; } catch {}
         sendState();
       } else {
@@ -103,6 +109,12 @@
   ws.addEventListener('close', () => { wsStateEl.textContent = 'disconnected'; });
   ws.addEventListener('error', () => { wsStateEl.textContent = 'error'; });
 
+  function currentLabel(){
+    const text = (noteEl.textContent || '').replace(/^Source:\s*/, '').trim();
+    if (text && text !== 'undefined') return text;
+    return filenameFromSrc(video.currentSrc || '');
+  }
+
   function sendState() {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
@@ -111,7 +123,7 @@
         muted: video.muted,
         volume: video.volume,
         rate: video.playbackRate,
-        current: (noteEl.textContent || '').replace(/^Source:\s*/, '') || (video.currentSrc || '').split('/').pop(),
+        current: currentLabel(),
         time: video.currentTime || 0,
         duration: isFinite(video.duration) ? video.duration : null
       }));
@@ -147,13 +159,17 @@
       else if (action === 'fullscreen')  { if (!document.fullscreenElement && video.requestFullscreen) await video.requestFullscreen(); }
       else if (action === 'exit_fullscreen') { if (document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen(); }
 
-      else if (action === 'load') { if (typeof msg.name === 'string' && msg.name) { await loadVideoByName(msg.name); showToast(`Loaded: ${msg.name}`); } }
+      else if (action === 'load') {
+        if (typeof msg.name === 'string' && msg.name) {
+          await loadVideoByName(msg.name);
+          showToast(`Loaded: ${msg.name}`);
+        }
+      }
     } catch { showToast('Action needs one tap on TV'); }
 
     updateHUD(); sendState();
   });
 
-  // Broadcast state on natural media events (throttled on timeupdate)
   ['play','pause','volumechange','ratechange','loadedmetadata','seeked','timeupdate','ended'].forEach(evt => {
     video.addEventListener(evt, () => {
       if (evt === 'timeupdate') {

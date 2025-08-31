@@ -345,6 +345,7 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     let msg; try { msg = JSON.parse(raw); } catch { return; }
 
+    // TV -> Remotes: state fan-out
     if (role === 'tv' && msg?.type === 'state') {
       broadcastToRemotes(room, {
         type: 'tv_state',
@@ -358,10 +359,19 @@ wss.on('connection', (ws, req) => {
       });
       return;
     }
-    if (role !== 'tv' && msg?.type === 'command') {
-      const allowed = ['play','pause','playpause','stop','seek','seekTo','seek_percent','volume_set','mute','unmute','toggle_mute','rate_set','fullscreen','exit_fullscreen','load'];
-      if (allowed.includes(msg.action)) forwardToTVs(room, msg);
-      return;
+
+    // Remote -> TV: commands; Remote -> Remotes: signals (e.g., qr_opened)
+    if (role !== 'tv') {
+      if (msg?.type === 'command') {
+        const allowed = ['play','pause','playpause','stop','seek','seekTo','seek_percent','volume_set','mute','unmute','toggle_mute','rate_set','fullscreen','exit_fullscreen','load'];
+        if (allowed.includes(msg.action)) forwardToTVs(room, msg);
+        return;
+      }
+      if (msg?.type === 'signal') {
+        // forward informational signals (QR opened, etc.) to other remotes
+        broadcastToRemotes(room, msg);
+        // return;
+      }
     }
   });
 
